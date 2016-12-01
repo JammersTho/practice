@@ -2,6 +2,8 @@ package com.example.anton.sticky_notes_1test;
 
 import android.app.Activity;
 import android.app.ActivityManager;
+import android.app.usage.UsageStats;
+import android.app.usage.UsageStatsManager;
 import android.content.Context;
 import android.content.pm.PackageManager;
 import android.os.Bundle;
@@ -20,8 +22,10 @@ import android.widget.TextView;
 
 import java.util.Iterator;
 import java.util.List;
+import java.util.SortedMap;
 import java.util.Timer;
 import java.util.TimerTask;
+import java.util.TreeMap;
 
 public class MainActivity extends AppCompatActivity {
 
@@ -66,20 +70,53 @@ public class MainActivity extends AppCompatActivity {
 
     private void getCurrentApp(){
         TextView current_app = (TextView)findViewById(R.id.current_app);
-        current_app.append("\n\t" + getApplicationContext().getPackageName());
-        Log.e("Current app",getApplicationContext().getPackageName());
 
+        String currentApp;
 
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.LOLLIPOP) {
+            // intentionally using string value as Context.USAGE_STATS_SERVICE was
+            // strangely only added in API 22 (LOLLIPOP_MR1)
+            @SuppressWarnings("WrongConstant")
+            UsageStatsManager usm = (UsageStatsManager) getSystemService("usagestats");
+            long time = System.currentTimeMillis();
+            List<UsageStats> appList = usm.queryUsageStats(UsageStatsManager.INTERVAL_DAILY,
+                    time - 1000 * 1000, time);
+            if (appList != null && appList.size() > 0) {
+                SortedMap<Long, UsageStats> mySortedMap = new TreeMap<Long, UsageStats>();
+                for (UsageStats usageStats : appList) {
+                    mySortedMap.put(usageStats.getLastTimeUsed(),
+                            usageStats);
+                }
+                if (mySortedMap != null && !mySortedMap.isEmpty()) {
+                    currentApp = mySortedMap.get(mySortedMap.lastKey()).getPackageName();
+                    current_app.append("\n\t" + currentApp);
+                    Log.e("Current app >= Lollipop",currentApp);
+                }
+            }
+        } else {
+            //this method is getting the package name of the first process which is not
+            //always the currently oped application
+            ActivityManager am = (ActivityManager) getSystemService(Context.ACTIVITY_SERVICE);
+            List<ActivityManager.RunningAppProcessInfo> tasks = am
+                    .getRunningAppProcesses();
+            currentApp = tasks.get(0).processName;
+
+            //this is showing only our application name. It might work if
+            //we run the application in background - not tested yet
+            //currentApp = getApplicationContext().getPackageName();
+
+            current_app.append("\n\t" + currentApp);
+            Log.e("Current app <= Lollipop",currentApp);
+        }
 
         //Continuously print the current app package name in a period of 5 secods.
-
-       /* Timer t = new Timer();
+       Timer t = new Timer();
         t.scheduleAtFixedRate(new TimerTask() {
             @Override
             public void run() {
-                Log.e("Current app",getApplicationContext().getPackageName());
+                Log.e("Current app is :",getApplicationContext().getPackageName());
             }
-        },0, 5000); */
+        },0, 5000);
 
     }
 
