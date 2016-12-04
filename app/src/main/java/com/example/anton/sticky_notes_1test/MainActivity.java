@@ -52,7 +52,7 @@ public class MainActivity extends AppCompatActivity {
         buttonStart.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {
                 getRunningActivities();
-                getCurrentApp();
+//                getCurrentApp();
                 createBackgroundService();
             }
         });
@@ -132,17 +132,6 @@ public class MainActivity extends AppCompatActivity {
             current_app.append("\n\t" + currentApp);
             Log.e("Current app <= Lollipop",currentApp);
         }
-
-
-        //Continuously print the current app package name in a period of 5 secods.
-//       Timer t = new Timer();
-//        t.scheduleAtFixedRate(new TimerTask() {
-//            @Override
-//            public void run() {
-//                Log.e("Current app is :",getApplicationContext().getPackageName());
-//            }
-//        },0, 5000);
-
     }
 
     @Override
