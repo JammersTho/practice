@@ -1,4 +1,0 @@
-#Wed Nov 30 20:42:18 GMT 2016
-base.0=D\:\\Projects\\AndroidStudioProjects\\sticky_notes_1test\\app\\build\\intermediates\\transforms\\dex\\debug\\folders\\1000\\1f\\main
-renamed.0=classes.dex
-file.0=D\:\\Projects\\AndroidStudioProjects\\sticky_notes_1test\\app\\build\\intermediates\\transforms\\dex\\debug\\folders\\1000\\1f\\main\\classes.dex
