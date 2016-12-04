@@ -73,21 +73,18 @@ public class BackgroundService extends Service {
                 }
                 if (mySortedMap != null && !mySortedMap.isEmpty()) {
                     currentApp = mySortedMap.get(mySortedMap.lastKey()).getPackageName();
-                    Log.e("Current app >= Lollipop",currentApp);
+                    Log.e("ANDROID VERSION ", ">= LOLLIPOP");
                 }
             }
 
         } else {
-            //this method is getting the package name of the first process which is not
-            //always the currently oped application
-//            ActivityManager am = (ActivityManager) getSystemService(Context.ACTIVITY_SERVICE);
-//            List<ActivityManager.RunningAppProcessInfo> tasks = am.getRunningAppProcesses();
-//            currentApp = tasks.get(0).processName;
+            //this method is getting the package name of the current opened application
+            ActivityManager am = (ActivityManager) getSystemService(Context.ACTIVITY_SERVICE);
+            List<ActivityManager.RunningTaskInfo> tasks = am.getRunningTasks(1);
+            ActivityManager.RunningTaskInfo ar = tasks.get(0);
+            currentApp = ar.topActivity.getPackageName();
 
-            //this is showing only our application name. It might work if
-            //we run the application in background - not tested yet
-            currentApp = getApplicationContext().getPackageName();
-            Log.e("Current app <= Lollipop",currentApp);
+            Log.e("ANDROID VERSION","<= LOLLIPOP");
         }
 
         return currentApp;
