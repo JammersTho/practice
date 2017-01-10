@@ -1,23 +1,17 @@
 package com.example.anton.sticky_notes_1test;
 
 import android.app.ActivityManager;
-import android.app.IntentService;
 import android.app.Service;
-import android.app.usage.UsageStats;
-import android.app.usage.UsageStatsManager;
 import android.content.Context;
 import android.content.Intent;
 import android.os.IBinder;
-import android.support.annotation.Nullable;
 import android.util.Log;
-import android.widget.TextView;
 import android.widget.Toast;
 
 import java.util.List;
-import java.util.SortedMap;
 import java.util.Timer;
 import java.util.TimerTask;
-import java.util.TreeMap;
+import java.lang.reflect.Field;
 
 /**
  * Created by Anton on 30-Nov-16.
@@ -41,7 +35,7 @@ public class BackgroundService extends Service {
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
 
-        Toast.makeText(this, "Background process strarted", Toast.LENGTH_LONG).show();
+        Toast.makeText(this, "Background process strated", Toast.LENGTH_LONG).show();
 
         t.scheduleAtFixedRate(new TimerTask() {
             @Override
@@ -56,38 +50,58 @@ public class BackgroundService extends Service {
     }
 
     public String getCurrentApp(){
-        String currentApp = null;
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.LOLLIPOP)
+        {
+            currentApp = getCurrentAppOverLollipop();
 
-        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.LOLLIPOP) {
-            // intentionally using string value as Context.USAGE_STATS_SERVICE was
-            // strangely only added in API 22 (LOLLIPOP_MR1)
-            @SuppressWarnings("WrongConstant")
-            UsageStatsManager usm = (UsageStatsManager) getSystemService("usagestats");
-            long time = System.currentTimeMillis();
-            List<UsageStats> appList = usm.queryUsageStats(UsageStatsManager.INTERVAL_DAILY,time - 1000 * 1000, time);
-            if (appList != null && appList.size() > 0) {
-                SortedMap<Long, UsageStats> mySortedMap = new TreeMap<Long, UsageStats>();
-                for (UsageStats usageStats : appList) {
-                    mySortedMap.put(usageStats.getLastTimeUsed(),usageStats);
-                }
-                if (mySortedMap != null && !mySortedMap.isEmpty()) {
-                    currentApp = mySortedMap.get(mySortedMap.lastKey()).getPackageName();
-                    Log.e("ANDROID VERSION ", ">= LOLLIPOP");
-                }
-            }
+            Log.e("Current App is ", currentApp);
+
+            Log.e("ANDROID VERSION ", ">= LOLLIPOP");
 
         } else {
-            //this method is getting the package name of the current opened application
-            
-            ActivityManager am = (ActivityManager) getSystemService(Context.ACTIVITY_SERVICE);
-            List<ActivityManager.RunningTaskInfo> tasks = am.getRunningTasks(1);
-            ActivityManager.RunningTaskInfo ar = tasks.get(0);
-            currentApp = ar.topActivity.getPackageName();
+            getCurrentAppUnderLollipop();
 
-            Log.e("ANDROID VERSION","<= LOLLIPOP");
+            Log.e("ANDROID VERSION","< LOLLIPOP");
         }
-
         return currentApp;
+    }
+
+    private String currentApp = null;
+
+    public String getCurrentAppOverLollipop()
+    {
+        final int PROCESS_STATE_TOP = 2;
+        ActivityManager.RunningAppProcessInfo currentInfo = null;
+        Field field = null;
+        try {
+            field = ActivityManager.RunningAppProcessInfo.class.getDeclaredField("processState");
+        } catch (Exception ignored) {
+        }
+        ActivityManager am = (ActivityManager) this.getSystemService(Context.ACTIVITY_SERVICE);
+        List<ActivityManager.RunningAppProcessInfo> appList = am.getRunningAppProcesses();
+        for (ActivityManager.RunningAppProcessInfo app : appList) {
+            if (app.importance == ActivityManager.RunningAppProcessInfo.IMPORTANCE_FOREGROUND
+                    && app.importanceReasonCode == ActivityManager.RunningAppProcessInfo.REASON_UNKNOWN) {
+                Integer state = null;
+                try {
+                    state = field.getInt(app);
+                } catch (Exception e) {
+                }
+                if (state != null && state == PROCESS_STATE_TOP) {
+                    currentInfo = app;
+                    break;
+                }
+            }
+        }
+        return currentInfo.toString();
+    }
+
+    public void getCurrentAppUnderLollipop()
+    {
+        ActivityManager am = (ActivityManager) getSystemService(Context.ACTIVITY_SERVICE);
+        List<ActivityManager.RunningTaskInfo> tasks = am.getRunningTasks(1);
+        ActivityManager.RunningTaskInfo ar = tasks.get(0);
+        currentApp = ar.topActivity.getPackageName();
     }
 
     @Override
@@ -95,7 +109,4 @@ public class BackgroundService extends Service {
         t.cancel();
         super.onDestroy();
     }
-
-
-
 }
