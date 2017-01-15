@@ -49,3 +49,7 @@ captures/
 
 ### Android Patch ###
 gen-external-apklibs
+app/src/main/java/com/example/anton/sticky_notes_1test/MainActivity.java.rej
+.idea/inspectionProfiles/Project_Default.xml
+.idea/inspectionProfiles/profiles_settings.xml
+build.gradle
