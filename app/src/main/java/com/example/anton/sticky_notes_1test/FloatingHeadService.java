@@ -2,6 +2,7 @@ package com.example.anton.sticky_notes_1test;
 
 import android.app.Service;
 import android.content.Intent;
+import android.graphics.Color;
 import android.graphics.PixelFormat;
 import android.os.IBinder;
 import android.view.Gravity;
@@ -9,12 +10,15 @@ import android.view.MotionEvent;
 import android.view.View;
 import android.view.WindowManager;
 import android.widget.ImageView;
+import android.widget.RelativeLayout;
+import android.widget.TextView;
 
 public class FloatingHeadService extends Service {
 
     private WindowManager windowManager;
-    private ImageView chatHead;
-    WindowManager.LayoutParams params;
+    private ImageView floatingBubble;
+    private RelativeLayout floatingLayout;
+    private WindowManager.LayoutParams params;
 
 
     @Override
@@ -23,14 +27,36 @@ public class FloatingHeadService extends Service {
 
         defineFloatHead();
         onTouchAction();
-        windowManager.addView(chatHead, params);
 
+    }
+
+    private void defineFloatHead() {
+
+        windowManager = (WindowManager) getSystemService(WINDOW_SERVICE);
+
+        floatingBubble = new ImageView(this);
+        floatingBubble.setImageResource(R.drawable.android_head);
+        floatingBubble.setMinimumHeight(50);
+        floatingBubble.setMinimumWidth(50);
+
+        params= new WindowManager.LayoutParams(
+                WindowManager.LayoutParams.WRAP_CONTENT,
+                WindowManager.LayoutParams.WRAP_CONTENT,
+                WindowManager.LayoutParams.TYPE_PHONE,
+                WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE,
+                PixelFormat.TRANSLUCENT);
+
+        params.gravity = Gravity.TOP | Gravity.LEFT;
+        //initial head position
+        params.x = 0;
+        params.y = 300;
+        windowManager.addView(floatingBubble, params);
     }
 
     private void onTouchAction() {
 
         //OnTouchListener
-        chatHead.setOnTouchListener(new View.OnTouchListener() {
+        floatingBubble.setOnTouchListener(new View.OnTouchListener() {
             private int initialX;
             private int initialY;
             private float initialTouchX;
@@ -46,13 +72,13 @@ public class FloatingHeadService extends Service {
                         initialTouchY = event.getRawY();
                         return true;
                     case MotionEvent.ACTION_UP:
+                        if(floatingLayout == null || !floatingLayout.isShown())
+                            showFloatingNoteContent();
                         return true;
                     case MotionEvent.ACTION_MOVE:
-                        params.x = initialX
-                                + (int) (event.getRawX() - initialTouchX);
-                        params.y = initialY
-                                + (int) (event.getRawY() - initialTouchY);
-                        windowManager.updateViewLayout(chatHead, params);
+                        params.x = initialX + (int) (event.getRawX() - initialTouchX);
+                        params.y = initialY + (int) (event.getRawY() - initialTouchY);
+                        windowManager.updateViewLayout(floatingBubble, params);
                         return true;
                 }
                 return false;
@@ -60,38 +86,54 @@ public class FloatingHeadService extends Service {
         });
     }
 
-    private void defineFloatHead() {
+    private void showFloatingNoteContent(){
 
-        windowManager = (WindowManager) getSystemService(WINDOW_SERVICE);
+        //create relative layout
+        floatingLayout = new RelativeLayout(this);
+        floatingLayout.setClickable(true);
 
-        chatHead = new ImageView(this);
-        chatHead.setImageResource(R.drawable.android_head);
-        chatHead.setMinimumHeight(50);
-        chatHead.setMinimumWidth(50);
-
-        params= new WindowManager.LayoutParams(
-                WindowManager.LayoutParams.WRAP_CONTENT,
+        //add parameters of this relative layout
+        WindowManager.LayoutParams rlp = new WindowManager.LayoutParams(
+                WindowManager.LayoutParams.MATCH_PARENT,
                 WindowManager.LayoutParams.WRAP_CONTENT,
                 WindowManager.LayoutParams.TYPE_PHONE,
                 WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE,
                 PixelFormat.TRANSLUCENT);
 
-        params.gravity = Gravity.TOP | Gravity.LEFT;
-        //initial head position
-        params.x = 0;
-        params.y = 300;
+        rlp.gravity = Gravity.TOP;
+
+
+        //set backgroujnd color to the layout
+        floatingLayout.setBackgroundColor(Color.parseColor("#380707"));
+
+        floatingLayout.setOnClickListener(new View.OnClickListener(){
+            public void onClick(View v) {
+                windowManager.removeView(floatingLayout);
+            }
+        });
+
+        TextView tv = new TextView(this);
+        tv.setText("Lorem ipsum dolor sit amet, consectetur adipiscing elit. Suspendisse purus felis, cursus non tempus id, aliquet aliquam leo. ");
+        tv.append("Morbi pulvinar, quam vel sagittis pulvinar, mi sem porttitor mi, quis sollicitudin ex justo a lorem. ");
+        tv.append("Quisque tristique, justo eu consectetur lacinia, tortor ipsum tempor nibh, sed consectetur magna lectus dignissim enim.");
+
+        floatingLayout.addView(tv);
+
+        //Add the Floating RelativeLayout to the windows manager
+        windowManager.addView(floatingLayout, rlp);
     }
 
     @Override
     public void onDestroy() {
         super.onDestroy();
-        if (chatHead != null)
-            windowManager.removeView(chatHead);
+        if (floatingBubble.isShown())
+            windowManager.removeView(floatingBubble);
+        if(floatingLayout != null && floatingLayout.isShown())
+            windowManager.removeView(floatingLayout);
     }
 
     @Override
     public IBinder onBind(Intent intent) {
-        // TODO: Return the communication channel to the service.
         return null;
     }
 }

@@ -6,6 +6,7 @@ import android.app.usage.UsageStats;
 import android.app.usage.UsageStatsManager;
 import android.content.Context;
 import android.content.Intent;
+import android.os.Build;
 import android.os.Bundle;
 import android.provider.Settings;
 import android.support.design.widget.FloatingActionButton;
@@ -138,6 +139,7 @@ public class MainActivity extends AppCompatActivity {
         lTextView.setText(lStringBuilder.toString());
     }
 
+    @TargetApi(23)
     private boolean hasPermission()
     {
         AppOpsManager appOps = (AppOpsManager) getSystemService(Context.APP_OPS_SERVICE);
