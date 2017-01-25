@@ -58,8 +58,10 @@ public class MainActivity extends AppCompatActivity {
             public void onClick(View v) {
                 //Checks permission, if not available, requests permission
                 //May need to repeat after getting permission!
-                fillStats();
-
+                if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.LOLLIPOP)
+                {
+                    fillStats();
+                }
                 createBackgroundService();
             }
         });
