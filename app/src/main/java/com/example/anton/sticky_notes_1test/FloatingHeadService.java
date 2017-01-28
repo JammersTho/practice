@@ -4,12 +4,19 @@ import android.app.Service;
 import android.content.Intent;
 import android.graphics.Color;
 import android.graphics.PixelFormat;
+import android.graphics.Point;
+import android.os.Build;
 import android.os.IBinder;
+import android.provider.Settings;
+import android.util.Log;
+import android.view.Display;
 import android.view.Gravity;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.WindowManager;
+import android.widget.Button;
 import android.widget.ImageView;
+import android.widget.LinearLayout;
 import android.widget.RelativeLayout;
 import android.widget.TextView;
 
@@ -17,16 +24,15 @@ public class FloatingHeadService extends Service {
 
     private WindowManager windowManager;
     private ImageView floatingBubble;
-    private RelativeLayout floatingLayout;
+    private LinearLayout floatingLayout;
     private WindowManager.LayoutParams params;
 
 
     @Override
     public void onCreate() {
         super.onCreate();
-
-        defineFloatHead();
-        onTouchAction();
+            defineFloatHead();
+            onTouchAction();
 
     }
 
@@ -57,10 +63,15 @@ public class FloatingHeadService extends Service {
 
         //OnTouchListener
         floatingBubble.setOnTouchListener(new View.OnTouchListener() {
+            //buble position
             private int initialX;
             private int initialY;
+            //touch positions
             private float initialTouchX;
             private float initialTouchY;
+            //actual moved distance params
+            private float distanceX;
+            private float distanceY;
 
             @Override
             public boolean onTouch(View v, MotionEvent event) {
@@ -72,13 +83,27 @@ public class FloatingHeadService extends Service {
                         initialTouchY = event.getRawY();
                         return true;
                     case MotionEvent.ACTION_UP:
-                        if(floatingLayout == null || !floatingLayout.isShown())
-                            showFloatingNoteContent();
+                        distanceX = event.getRawX() - initialTouchX;
+                        distanceY = event.getRawY() - initialTouchY;
+
+                        //check if the floatie is moved or clicked
+                        if(distanceX >= -20 && distanceX <= 20 && distanceY >= -20 && distanceY <= 20) {
+                            //check if the floatie is already shown
+                            if (floatingLayout == null || !floatingLayout.isShown()) {
+                                showFloatingNoteContent();
+                            }
+                        }
+
+                        //stuck the floatie to left or right
+                        possitionTheFloatieSide();
+
                         return true;
                     case MotionEvent.ACTION_MOVE:
                         params.x = initialX + (int) (event.getRawX() - initialTouchX);
                         params.y = initialY + (int) (event.getRawY() - initialTouchY);
+
                         windowManager.updateViewLayout(floatingBubble, params);
+
                         return true;
                 }
                 return false;
@@ -86,21 +111,39 @@ public class FloatingHeadService extends Service {
         });
     }
 
+    private void possitionTheFloatieSide() {
+        //Get the midle of the screen
+        Display display = windowManager.getDefaultDisplay();
+        final Point screenSize = new Point();
+        display.getSize(screenSize);
+        int theMiddleOfTheScreen = screenSize.x / 2;
+
+        if(params.x <= theMiddleOfTheScreen){
+            params.x = 0;
+        }
+        else if(params.x > theMiddleOfTheScreen){
+            params.x = screenSize.x;
+        }
+
+        windowManager.updateViewLayout(floatingBubble, params);
+    }
+
+
     private void showFloatingNoteContent(){
 
         //create relative layout
-        floatingLayout = new RelativeLayout(this);
+        floatingLayout = new LinearLayout(this);
         floatingLayout.setClickable(true);
 
         //add parameters of this relative layout
-        WindowManager.LayoutParams rlp = new WindowManager.LayoutParams(
+        WindowManager.LayoutParams contentLayoutParams = new WindowManager.LayoutParams(
                 WindowManager.LayoutParams.MATCH_PARENT,
                 WindowManager.LayoutParams.WRAP_CONTENT,
                 WindowManager.LayoutParams.TYPE_PHONE,
                 WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE,
                 PixelFormat.TRANSLUCENT);
 
-        rlp.gravity = Gravity.TOP;
+        contentLayoutParams.gravity = Gravity.TOP;
 
 
         //set backgroujnd color to the layout
@@ -112,15 +155,28 @@ public class FloatingHeadService extends Service {
             }
         });
 
+
+        LinearLayout.LayoutParams textViewProperties = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.WRAP_CONTENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+        );
+
         TextView tv = new TextView(this);
         tv.setText("Lorem ipsum dolor sit amet, consectetur adipiscing elit. Suspendisse purus felis, cursus non tempus id, aliquet aliquam leo. ");
         tv.append("Morbi pulvinar, quam vel sagittis pulvinar, mi sem porttitor mi, quis sollicitudin ex justo a lorem. ");
         tv.append("Quisque tristique, justo eu consectetur lacinia, tortor ipsum tempor nibh, sed consectetur magna lectus dignissim enim.");
+        tv.setLayoutParams(textViewProperties);
+
+//        Button btn = new Button(this);
+//        btn.setText("Don't touch me");
+
+
 
         floatingLayout.addView(tv);
+//        floatingLayout.addView(btn);
 
         //Add the Floating RelativeLayout to the windows manager
-        windowManager.addView(floatingLayout, rlp);
+        windowManager.addView(floatingLayout, contentLayoutParams);
     }
 
     @Override
