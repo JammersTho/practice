@@ -36,6 +36,7 @@ public class BackgroundService extends Service {
 
     public int count = 0;
     public Timer t = new Timer();
+    private String currentApp = null;
 
     @Override
     public IBinder onBind(Intent intent) {
@@ -76,8 +77,6 @@ public class BackgroundService extends Service {
         }
         return currentApp;
     }
-
-    private String currentApp = null;
 
     @TargetApi(android.os.Build.VERSION_CODES.LOLLIPOP)
     public String getCurrentAppOverLollipop()
@@ -157,7 +156,7 @@ public class BackgroundService extends Service {
     private static final SimpleDateFormat dateFormat = new SimpleDateFormat("M-d-yyyy HH:mm:ss");
     public static final String TAG = BackgroundService.class.getSimpleName();
 
-    @TargetApi(android.os.Build.VERSION_CODES.LOLLIPOP)
+    @TargetApi(23)
     public static List<UsageStats> getUsageStatsList(Context context){
         UsageStatsManager usm = getUsageStatsManager(context);
         Calendar calendar = Calendar.getInstance();
@@ -171,7 +170,8 @@ public class BackgroundService extends Service {
         List<UsageStats> usageStatsList = usm.queryUsageStats(UsageStatsManager.INTERVAL_DAILY, startTime, endTime);
         return usageStatsList;
     }
-    @TargetApi(android.os.Build.VERSION_CODES.LOLLIPOP)
+
+    @TargetApi(23)
     public static void printUsageStats(List<UsageStats> usageStatsList){
         for (UsageStats u : usageStatsList)
         {
@@ -185,9 +185,6 @@ public class BackgroundService extends Service {
         UsageStatsManager usm = (UsageStatsManager) context.getSystemService("usagestats");
         return usm;
     }
-
-
-
 
     public void getCurrentAppUnderLollipop()
     {
