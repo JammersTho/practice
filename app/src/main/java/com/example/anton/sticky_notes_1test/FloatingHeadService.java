@@ -1,16 +1,21 @@
 package com.example.anton.sticky_notes_1test;
 
 import android.app.Service;
+import android.content.Context;
 import android.content.Intent;
 import android.graphics.Color;
 import android.graphics.PixelFormat;
 import android.graphics.Point;
+import android.os.Build;
 import android.os.IBinder;
+import android.text.method.ScrollingMovementMethod;
 import android.view.Display;
 import android.view.Gravity;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.WindowManager;
+import android.view.inputmethod.InputMethodManager;
+import android.widget.EditText;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.TextView;
@@ -25,12 +30,24 @@ public class FloatingHeadService extends Service {
 
     private LinearLayout floatingLayout;
     private ImageView floatingBubble;
-    //false - left / true - right
-    private boolean floatingHeadPosition = false;
+
+    private EditText noteTextField;
+
+    private String HeadPosition = "left";
+    private boolean contentWasShown = false;
+    private boolean noteContentFirstTimeCreation = true;
     private Point screenSize;
     private final int TOP_SCREEN_PADDING = 100;
     private final int[] FLOATING_HEAD_SIZE = {50,50};
+
     private final int[] NOTE_EXTRAS_ICONS = {30,30};
+    //Keyboard params
+    private int heightDiff;
+    private boolean wasOpened;
+    private final int DefaultKeyboardDP = 100;
+
+    // Lollipop includes button bar in the root. Add height of button bar (48dp) to maxDiff
+    private final int EstimatedKeyboardDP = DefaultKeyboardDP + (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP ? 48 : 0);
 
     @Override
     public void onCreate() {
@@ -62,12 +79,10 @@ public class FloatingHeadService extends Service {
                 WindowManager.LayoutParams.WRAP_CONTENT,
                 WindowManager.LayoutParams.WRAP_CONTENT,
                 WindowManager.LayoutParams.TYPE_PHONE,
-                WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE,
+                WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL,
                 PixelFormat.TRANSLUCENT);
         wmParams.gravity = Gravity.TOP | Gravity.LEFT;
         wmParams.y = 300;
-
-        floatingHeadPosition = true;
 
         //define floating bubble view
         floatingBubble = new ImageView(this);
@@ -90,15 +105,18 @@ public class FloatingHeadService extends Service {
 
                 switch (event.getAction()) {
                     case MotionEvent.ACTION_DOWN:
-                        if(floatingLayout.isShown()) {
-                            floatingLayout.removeAllViews();
+                        if (floatingLayout.isShown()) {
                             parentlayout.removeView(floatingLayout);
+                            contentWasShown = true;
+                        } else {
+                            contentWasShown = false;
                         }
 
                         initialX = wmParams.x;
                         initialY = wmParams.y;
                         initialTouchX = event.getRawX();
                         initialTouchY = event.getRawY();
+
                         return true;
                     case MotionEvent.ACTION_UP:
                         distanceX = event.getRawX() - initialTouchX;
@@ -109,12 +127,23 @@ public class FloatingHeadService extends Service {
 
                         //check if the floatie is moved or clicked
                         if (distanceX >= -20 && distanceX <= 20 && distanceY >= -20 && distanceY <= 20) {
-                            //check if the floatie is already shown
-                            if(floatingLayout.isShown()) {
-                                parentlayout.removeAllViews();
-                            }else if (!floatingLayout.isShown()) {
-                                    showFloatingNoteContent();
+                            //check if the floatie content is already shown
+                            if(contentWasShown == true)
+                            {
+                                parentlayout.removeView(floatingLayout);
                             }
+                            else if(contentWasShown == false && noteContentFirstTimeCreation == true)
+                            {
+                                showFloatingNoteContent();
+                                updateLayoutsStructureAndHeadPossition();
+                                noteContentFirstTimeCreation = false;
+                            }
+                            else if(contentWasShown == false && noteContentFirstTimeCreation == false)
+                            {
+                                parentlayout.addView(floatingLayout);
+                                updateLayoutsStructureAndHeadPossition();
+                            }
+
                         }
 
                         return true;
@@ -127,6 +156,7 @@ public class FloatingHeadService extends Service {
                         windowManager.updateViewLayout(parentlayout, wmParams);
 
                         return true;
+
                 }
                 return false;
             }
@@ -146,10 +176,10 @@ public class FloatingHeadService extends Service {
 
         if (wmParams.x <= theMiddleOfTheScreen) {
             wmParams.x = 0;
-            floatingHeadPosition = false;
+            HeadPosition = "left";
         } else if (wmParams.x > theMiddleOfTheScreen) {
             wmParams.x = screenSize.x;
-            floatingHeadPosition = true;
+            HeadPosition = "right";
         }
 
         parentlayout.updateViewLayout(floatingBubble, plParams);
@@ -160,8 +190,8 @@ public class FloatingHeadService extends Service {
 
         //parentlayout.setBackgroundColor(Color.parseColor("#380788"));
 
-        int contentHeight = Integer.valueOf(screenSize.y) - TOP_SCREEN_PADDING;
         int contentWidth = Integer.valueOf(screenSize.x) - FLOATING_HEAD_SIZE[0];
+        int contentHeight = Integer.valueOf(screenSize.y) - TOP_SCREEN_PADDING;
 
         //define the floating content layout
         LinearLayout.LayoutParams llContextProperties = new LinearLayout.LayoutParams(
@@ -171,12 +201,6 @@ public class FloatingHeadService extends Service {
         floatingLayout.setOrientation(LinearLayout.VERTICAL);
         floatingLayout.setBackgroundColor(Color.parseColor("#E0E0E0"));
 
-        floatingLayout.setOnClickListener(new View.OnClickListener() {
-            public void onClick(View v) {
-                floatingLayout.removeAllViews();
-                parentlayout.removeView(floatingLayout);
-            }
-        });
 
         createFloatingContent();
 
@@ -184,16 +208,6 @@ public class FloatingHeadService extends Service {
         //to the top from the floating content. 50 is the size of the the floatie
         //we are removing it so we can touch it in the middle
         wmParams.y = TOP_SCREEN_PADDING - FLOATING_HEAD_SIZE[0];
-
-        //check floating head possition
-        if( floatingHeadPosition == false) {
-            parentlayout.addView(floatingLayout);
-        }else if ( floatingHeadPosition == true){
-            parentlayout.removeAllViews();
-            parentlayout.addView(floatingLayout);
-            parentlayout.addView(floatingBubble);
-        }
-
 
         //Add the Floating RelativeLayout to the windows manager
         windowManager.updateViewLayout(parentlayout, wmParams);
@@ -210,17 +224,51 @@ public class FloatingHeadService extends Service {
 
         LinearLayout extrasL = createExtrasView();
 
-        TextView tv2 = new TextView(this);
-        tv2.setText("Lorem ipsum dolor sit amet, consectetur adipiscing elit. Suspendisse purus felis, cursus non tempus id, aliquet aliquam leo. ");
-        tv2.append("Morbi pulvinar, quam vel sagittis pulvinar, mi sem porttitor mi, quis sollicitudin ex justo a lorem. ");
-        tv2.append("Quisque tristique, justo eu consectetur lacinia, tortor ipsum tempor nibh, sed consectetur magna lectus dignissim enim.");
-        tv2.setBackgroundColor(Color.parseColor("#4286f4"));
-
+        EditText noteText = createNoteText();
 
         floatingLayout.addView(title);
         floatingLayout.addView(extrasL);
-        floatingLayout.addView(tv2);
+        floatingLayout.addView(noteText);
 
+    }
+
+    private EditText createNoteText() {
+
+        noteTextField = new EditText(this);
+        LinearLayout.LayoutParams txtFieldParams = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                300
+        );
+        txtFieldParams.setMargins(0,20,0,0);
+        noteTextField.setLayoutParams(txtFieldParams);
+        noteTextField.setGravity(Gravity.TOP);
+        noteTextField.setTextColor(Color.parseColor("#000000"));
+        noteTextField.setBackgroundColor(Color.parseColor("#ffffff"));
+        noteTextField.setMaxLines(3);
+        noteTextField.setVerticalScrollBarEnabled(true);
+        noteTextField.setMovementMethod(new ScrollingMovementMethod());
+
+
+        noteTextField.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) {
+
+                //getKeyboardHeight();
+
+                //resize the screen to show the keyboard
+                int contentWidth = Integer.valueOf(screenSize.x) - FLOATING_HEAD_SIZE[0];
+                int contentHeight = Integer.valueOf(screenSize.y) - (TOP_SCREEN_PADDING + heightDiff);
+                LinearLayout.LayoutParams llContextProperties = new LinearLayout.LayoutParams(
+                        contentWidth,
+                        contentHeight);
+                floatingLayout.setLayoutParams(llContextProperties);
+
+                InputMethodManager imm = (InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
+                v.requestFocus();
+                imm.showSoftInput(v, 0);
+            }
+        });
+
+        return noteTextField;
     }
 
     private LinearLayout createExtrasView(){
@@ -267,6 +315,19 @@ public class FloatingHeadService extends Service {
         extrasL.addView(reminder);
 
         return extrasL;
+    }
+
+    private void updateLayoutsStructureAndHeadPossition(){
+        //check floating head possition
+        if( HeadPosition == "left") {
+            parentlayout.removeAllViews();
+            parentlayout.addView(floatingBubble);
+            parentlayout.addView(floatingLayout);
+        }else if ( HeadPosition == "right"){
+            parentlayout.removeAllViews();
+            parentlayout.addView(floatingLayout);
+            parentlayout.addView(floatingBubble);
+        }
     }
 
     @Override
